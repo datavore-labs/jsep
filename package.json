@@ -12,7 +12,7 @@
 		"type": "git",
 		"url": "https://github.com/soney/jsep.git"
 	},
-	"main": "build/jsep.js",
+	"main": "src/jsep.js",
 	"private": false,
 	"dependencies": {},
 	"devDependencies": {
