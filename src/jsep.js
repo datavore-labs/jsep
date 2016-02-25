@@ -158,7 +158,8 @@
 								type: CONDITIONAL_EXP,
 								test: test,
 								consequent: consequent,
-								alternate: alternate
+								alternate: alternate,
+								pos: index
 							};
 						} else {
 							throwError('Expected :', index);
@@ -326,7 +327,8 @@
 					return {
 						type: LITERAL,
 						value: parseFloat(number),
-						raw: number
+						raw: number,
+						pos: index
 					};
 				},
 
@@ -364,7 +366,8 @@
 					return {
 						type: LITERAL,
 						value: str,
-						raw: quote + str + quote
+						raw: quote + str + quote,
+						pos: index
 					};
 				},
 				
@@ -402,7 +405,8 @@
 					} else {
 						return {
 							type: IDENTIFIER,
-							name: identifier
+							name: identifier,
+							pos: index
 						};
 					}
 				},
