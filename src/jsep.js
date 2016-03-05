@@ -494,6 +494,7 @@
 								'arguments': gobbleArguments(CPAREN_CODE),
 								callee: node
 							};
+							node.endPos = index;
 						}
 						gobbleSpaces();
 						ch_i = exprICode(index);
