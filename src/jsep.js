@@ -58,7 +58,8 @@
 			'<': 7,  '>': 7,  '<=': 7,  '>=': 7,
 			'<<':8,  '>>': 8, '>>>': 8,
 			'+': 9, '-': 9,
-			'*': 10, '/': 10, '%': 10
+			'*': 10, '/': 10, '%': 10,
+			'=': undefined
 		},
 	// Get return the longest key length of any object
 		getMaxKeyLen = function(obj) {

@@ -1,4 +1,4 @@
-//     JavaScript Expression Parser (JSEP) 0.3.0
+//     JavaScript Expression Parser (JSEP) 0.3.1-beta
 //     JSEP may be freely distributed under the MIT License
 //     http://jsep.from.so/
 
@@ -7,7 +7,7 @@
 	'use strict';
 	// Node Types
 	// ----------
-	
+
 	// This is the full set of types that any JSEP node can be.
 	// Store them here to save space when minified
 	var COMPOUND = 'Compound',
@@ -43,7 +43,7 @@
 
 	// Operations
 	// ----------
-	
+
 	// Set `t` to `true` to save space (when minified, not gzipped)
 		t = true,
 	// Use a quickly-accessible map to store all of the unary operators
@@ -55,10 +55,11 @@
 		binary_ops = {
 			'||': 1, '&&': 2, '|': 3,  '^': 4,  '&': 5,
 			'==': 6, '!=': 6, '===': 6, '!==': 6,
-			'<': 7,  '>': 7,  '<=': 7,  '>=': 7, 
+			'<': 7,  '>': 7,  '<=': 7,  '>=': 7,
 			'<<':8,  '>>': 8, '>>>': 8,
 			'+': 9, '-': 9,
-			'*': 10, '/': 10, '%': 10
+			'*': 10, '/': 10, '%': 10,
+			'=': undefined
 		},
 	// Get return the longest key length of any object
 		getMaxKeyLen = function(obj) {
@@ -88,34 +89,36 @@
 		},
 	// Utility function (gets called from multiple places)
 	// Also note that `a && b` and `a || b` are *logical* expressions, not binary expressions
-		createBinaryExpression = function (operator, left, right) {
+		createBinaryExpression = function (operator, left, right, startPos, endPos) {
 			var type = (operator === '||' || operator === '&&') ? LOGICAL_EXP : BINARY_EXP;
 			return {
 				type: type,
 				operator: operator,
 				left: left,
-				right: right
+				right: right,
+				startPos: startPos,
+				endPos: endPos
 			};
 		},
-		// `ch` is a character code in the next three functions
+	// `ch` is a character code in the next three functions
 		isDecimalDigit = function(ch) {
 			return (ch >= 48 && ch <= 57); // 0...9
 		},
 		isIdentifierStart = function(ch) {
 			return (ch === 36) || (ch === 95) || // `$` and `_`
-					(ch >= 65 && ch <= 90) || // A...Z
-					(ch >= 97 && ch <= 122); // a...z
+				(ch >= 65 && ch <= 90) || // A...Z
+				(ch >= 97 && ch <= 122); // a...z
 		},
 		isIdentifierPart = function(ch) {
 			return (ch === 36) || (ch === 95) || // `$` and `_`
-					(ch >= 65 && ch <= 90) || // A...Z
-					(ch >= 97 && ch <= 122) || // a...z
-					(ch >= 48 && ch <= 57); // 0...9
+				(ch >= 65 && ch <= 90) || // A...Z
+				(ch >= 97 && ch <= 122) || // a...z
+				(ch >= 48 && ch <= 57); // 0...9
 		},
 
-		// Parsing
-		// -------
-		// `expr` is a string with the passed in expression
+	// Parsing
+	// -------
+	// `expr` is a string with the passed in expression
 		jsep = function(expr) {
 			// `index` stores the character number we are currently at while `length` is a constant
 			// All of the gobbles below will modify `index` as we move along
@@ -126,7 +129,7 @@
 				exprICode = function(i) { return charCodeAtFunc.call(expr, i); },
 				length = expr.length,
 
-				// Push `index` up to the next non-space character
+			// Push `index` up to the next non-space character
 				gobbleSpaces = function() {
 					var ch = exprICode(index);
 					// space or tab
@@ -134,8 +137,8 @@
 						ch = exprICode(++index);
 					}
 				},
-				
-				// The main parsing function. Much of this code is dedicated to ternary expressions
+
+			// The main parsing function. Much of this code is dedicated to ternary expressions
 				gobbleExpression = function() {
 					var test = gobbleBinaryExpression(),
 						consequent, alternate;
@@ -158,7 +161,8 @@
 								type: CONDITIONAL_EXP,
 								test: test,
 								consequent: consequent,
-								alternate: alternate
+								alternate: alternate,
+								pos: index
 							};
 						} else {
 							throwError('Expected :', index);
@@ -168,10 +172,10 @@
 					}
 				},
 
-				// Search for the operation portion of the string (e.g. `+`, `===`)
-				// Start by taking the longest possible binary operations (3 characters: `===`, `!==`, `>>>`)
-				// and move down from 3 to 2 to 1 character until a matching binary operation is found
-				// then, return that binary operation
+			// Search for the operation portion of the string (e.g. `+`, `===`)
+			// Start by taking the longest possible binary operations (3 characters: `===`, `!==`, `>>>`)
+			// and move down from 3 to 2 to 1 character until a matching binary operation is found
+			// then, return that binary operation
 				gobbleBinaryOp = function() {
 					gobbleSpaces();
 					var biop, to_check = expr.substr(index, max_binop_len), tc_len = to_check.length;
@@ -185,10 +189,11 @@
 					return false;
 				},
 
-				// This function is responsible for gobbling an individual expression,
-				// e.g. `1`, `1+2`, `a+(b*2)-Math.sqrt(2)`
+			// This function is responsible for gobbling an individual expression,
+			// e.g. `1`, `1+2`, `a+(b*2)-Math.sqrt(2)`
 				gobbleBinaryExpression = function() {
 					var ch_i, node, biop, prec, stack, biop_info, left, right, i;
+					var startPos = index;
 
 					// First, try to get the leftmost thing
 					// Then, check to see if there's a binary operator operating on that leftmost thing
@@ -224,7 +229,7 @@
 							right = stack.pop();
 							biop = stack.pop().value;
 							left = stack.pop();
-							node = createBinaryExpression(biop, left, right);
+							node = createBinaryExpression(biop, left, right, startPos, index);
 							stack.push(node);
 						}
 
@@ -238,17 +243,18 @@
 					i = stack.length - 1;
 					node = stack[i];
 					while(i > 1) {
-						node = createBinaryExpression(stack[i - 1].value, stack[i - 2], node); 
+						node = createBinaryExpression(stack[i - 1].value, stack[i - 2], node, startPos, index);
 						i -= 2;
 					}
 					return node;
 				},
 
-				// An individual part of a binary expression:
-				// e.g. `foo.bar(baz)`, `1`, `"abc"`, `(a % 2)` (because it's in parenthesis)
+			// An individual part of a binary expression:
+			// e.g. `foo.bar(baz)`, `1`, `"abc"`, `(a % 2)` (because it's in parenthesis)
 				gobbleToken = function() {
 					var ch, to_check, tc_len;
-					
+					var startPos = index;
+
 					gobbleSpaces();
 					ch = exprICode(index);
 
@@ -273,18 +279,21 @@
 									type: UNARY_EXP,
 									operator: to_check,
 									argument: gobbleToken(),
-									prefix: true
+									prefix: true,
+									startPos: startPos,
+									endPos: index
 								};
 							}
 							to_check = to_check.substr(0, --tc_len);
 						}
-						
+
 						return false;
 					}
 				},
-				// Parse simple numeric literals: `12`, `3.4`, `.5`. Do this by using a string to
-				// keep track of everything in the numeric literal and then calling `parseFloat` on that string
+			// Parse simple numeric literals: `12`, `3.4`, `.5`. Do this by using a string to
+			// keep track of everything in the numeric literal and then calling `parseFloat` on that string
 				gobbleNumericLiteral = function() {
+					var startPos = index;
 					var number = '', ch, chCode;
 					while(isDecimalDigit(exprICode(index))) {
 						number += exprI(index++);
@@ -297,7 +306,7 @@
 							number += exprI(index++);
 						}
 					}
-					
+
 					ch = exprI(index);
 					if(ch === 'e' || ch === 'E') { // exponent marker
 						number += exprI(index++);
@@ -312,13 +321,13 @@
 							throwError('Expected exponent (' + number + exprI(index) + ')', index);
 						}
 					}
-					
+
 
 					chCode = exprICode(index);
 					// Check to make sure this isn't a variable name that start with a number (123abc)
 					if(isIdentifierStart(chCode)) {
 						throwError('Variable names cannot start with a number (' +
-									number + exprI(index) + ')', index);
+							number + exprI(index) + ')', index);
 					} else if(chCode === PERIOD_CODE) {
 						throwError('Unexpected period', index);
 					}
@@ -326,14 +335,17 @@
 					return {
 						type: LITERAL,
 						value: parseFloat(number),
-						raw: number
+						raw: number,
+						startPos: startPos,
+						endPos: index
 					};
 				},
 
-				// Parses a string literal, staring with single or double quotes with basic support for escape codes
-				// e.g. `"hello world"`, `'this is\nJSEP'`
+			// Parses a string literal, staring with single or double quotes with basic support for escape codes
+			// e.g. `"hello world"`, `'this is\nJSEP'`
 				gobbleStringLiteral = function() {
 					var str = '', quote = exprI(index++), closed = false, ch;
+					var startPos = index;
 
 					while(index < length) {
 						ch = exprI(index++);
@@ -350,6 +362,7 @@
 								case 'b': str += '\b'; break;
 								case 'f': str += '\f'; break;
 								case 'v': str += '\x0B'; break;
+								case '\\': str += '\\'; break;
 							}
 						} else {
 							str += ch;
@@ -363,16 +376,19 @@
 					return {
 						type: LITERAL,
 						value: str,
-						raw: quote + str + quote
+						raw: quote + str + quote,
+						startPos: startPos,
+						endPos: index
 					};
 				},
-				
-				// Gobbles only identifiers
-				// e.g.: `foo`, `_value`, `$x1`
-				// Also, this function checks if that identifier is a literal:
-				// (e.g. `true`, `false`, `null`) or `this`
+
+			// Gobbles only identifiers
+			// e.g.: `foo`, `_value`, `$x1`
+			// Also, this function checks if that identifier is a literal:
+			// (e.g. `true`, `false`, `null`) or `this`
 				gobbleIdentifier = function() {
 					var ch = exprICode(index), start = index, identifier;
+					var startPos = index;
 
 					if(isIdentifierStart(ch)) {
 						index++;
@@ -401,16 +417,18 @@
 					} else {
 						return {
 							type: IDENTIFIER,
-							name: identifier
+							name: identifier,
+							startPos: startPos,
+							endPos: index
 						};
 					}
 				},
 
-				// Gobbles a list of arguments within the context of a function call
-				// or array literal. This function also assumes that the opening character
-				// `(` or `[` has already been gobbled, and gobbles expressions and commas
-				// until the terminator character `)` or `]` is encountered.
-				// e.g. `foo(bar, baz)`, `my_func()`, or `[bar, baz]`
+			// Gobbles a list of arguments within the context of a function call
+			// or array literal. This function also assumes that the opening character
+			// `(` or `[` has already been gobbled, and gobbles expressions and commas
+			// until the terminator character `)` or `]` is encountered.
+			// e.g. `foo(bar, baz)`, `my_func()`, or `[bar, baz]`
 				gobbleArguments = function(termination) {
 					var ch_i, args = [], node;
 					while(index < length) {
@@ -432,14 +450,14 @@
 					return args;
 				},
 
-				// Gobble a non-literal variable name. This variable name may include properties
-				// e.g. `foo`, `bar.baz`, `foo['bar'].baz`
-				// It also gobbles function calls:
-				// e.g. `Math.acos(obj.angle)`
+			// Gobble a non-literal variable name. This variable name may include properties
+			// e.g. `foo`, `bar.baz`, `foo['bar'].baz`
+			// It also gobbles function calls:
+			// e.g. `Math.acos(obj.angle)`
 				gobbleVariable = function() {
 					var ch_i, node;
 					ch_i = exprICode(index);
-						
+
 					if(ch_i === OPAREN_CODE) {
 						node = gobbleGroup();
 					} else {
@@ -477,6 +495,8 @@
 								'arguments': gobbleArguments(CPAREN_CODE),
 								callee: node
 							};
+							node.startPos = node.callee.startPos;
+							node.endPos = index;
 						}
 						gobbleSpaces();
 						ch_i = exprICode(index);
@@ -484,11 +504,11 @@
 					return node;
 				},
 
-				// Responsible for parsing a group of things within parentheses `()`
-				// This function assumes that it needs to gobble the opening parenthesis
-				// and then tries to gobble everything within that parenthesis, assuming
-				// that the next thing it should see is the close parenthesis. If not,
-				// then the expression probably doesn't have a `)`
+			// Responsible for parsing a group of things within parentheses `()`
+			// This function assumes that it needs to gobble the opening parenthesis
+			// and then tries to gobble everything within that parenthesis, assuming
+			// that the next thing it should see is the close parenthesis. If not,
+			// then the expression probably doesn't have a `)`
 				gobbleGroup = function() {
 					index++;
 					var node = gobbleExpression();
@@ -501,9 +521,9 @@
 					}
 				},
 
-				// Responsible for parsing Array literals `[1, 2, 3]`
-				// This function assumes that it needs to gobble the opening bracket
-				// and then tries to gobble the expressions as arguments.
+			// Responsible for parsing Array literals `[1, 2, 3]`
+			// This function assumes that it needs to gobble the opening bracket
+			// and then tries to gobble the expressions as arguments.
 				gobbleArray = function() {
 					index++;
 					return {
@@ -513,7 +533,7 @@
 				},
 
 				nodes = [], ch_i, node;
-				
+
 			while(index < length) {
 				ch_i = exprICode(index);
 
@@ -525,8 +545,8 @@
 					// Try to gobble each expression individually
 					if((node = gobbleExpression())) {
 						nodes.push(node);
-					// If we weren't able to find a binary expression and are out of room, then
-					// the expression passed in probably has too much
+						// If we weren't able to find a binary expression and are out of room, then
+						// the expression passed in probably has too much
 					} else if(index < length) {
 						throwError('Unexpected "' + exprI(index) + '"', index);
 					}
@@ -545,7 +565,7 @@
 		};
 
 	// To be filled in by the template
-	jsep.version = '0.3.0';
+	jsep.version = '0.3.1-beta';
 	jsep.toString = function() { return 'JavaScript Expression Parser (JSEP) v' + jsep.version; };
 
 	/**
@@ -616,3 +636,4 @@
 		}
 	}
 }(this));
+
