@@ -431,22 +431,33 @@
 			// e.g. `foo(bar, baz)`, `my_func()`, or `[bar, baz]`
 				gobbleArguments = function(termination) {
 					var ch_i, args = [], node;
+					var mark; // Marker for trimmed values
 					while(index < length) {
+						mark = index;
 						gobbleSpaces();
 						ch_i = exprICode(index);
 						if(ch_i === termination) { // done parsing
+							// Update for ending spaces
+							if (args.length) {
+								args[args.length - 1].endPos = index;
+							}
 							index++;
 							break;
 						} else if (ch_i === COMMA_CODE) { // between expressions
+							// Update old node's end index and advance
+							if (node) node.endPos = index;
 							index++;
 						} else {
 							node = gobbleExpression();
+							node.startPos = mark;
 							if(!node || node.type === COMPOUND) {
 								throwError('Expected comma', index);
 							}
 							args.push(node);
+							// Update mark
 						}
 					}
+
 					return args;
 				},
 
