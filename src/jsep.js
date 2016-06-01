@@ -54,8 +54,10 @@
 	// see [Order of operations](http://en.wikipedia.org/wiki/Order_of_operations#Programming_language)
 		binary_ops = {
 			'=': -10, 'as': -1,
-			'||': 1, '&&': 2, '|': 3,  '^': 4,  '&': 5,
-			'==': 6, '!=': 6, '===': 6, '!==': 6,
+			'||': 1, 'OR': 1, 'or': 1,
+			'&&': 2, 'AND': 2, 'and': 2,
+			'|': 3,  '^': 4,  '&': 5,
+			'==': 6, '!=': 6, '<>': 6, '===': 6, '!==': 6,
 			'<': 7,  '>': 7,  '<=': 7,  '>=': 7,
 			'<<':8,  '>>': 8, '>>>': 8,
 			'+': 9, '-': 9,
@@ -90,7 +92,11 @@
 	// Utility function (gets called from multiple places)
 	// Also note that `a && b` and `a || b` are *logical* expressions, not binary expressions
 		createBinaryExpression = function (operator, left, right, startPos, endPos) {
-			var type = (operator === '||' || operator === '&&') ? LOGICAL_EXP : BINARY_EXP;
+			var type = (
+				operator === '||' || operator === 'or' || operator === 'OR' ||
+				operator === '&&' || operator === 'and' || operator === 'AND'
+			) ? LOGICAL_EXP : BINARY_EXP;
+
 			return {
 				type: type,
 				operator: operator,

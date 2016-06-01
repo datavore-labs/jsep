@@ -74,6 +74,53 @@ test('Function Calls', function() {
 	test_parser(";", {});
 });
 
+test('Logical ops', function() {
+	test_parser('a or b', {
+		left: { name: 'a' },
+		right: { name: 'b' },
+		operator: 'or',
+		type: 'LogicalExpression'
+	});
+
+	test_parser('a OR b', {
+		left: { name: 'a' },
+		right: { name: 'b' },
+		operator: 'OR',
+		type: 'LogicalExpression'
+	});
+
+	test_parser('a OR b', {
+		left: { name: 'a' },
+		right: { name: 'b' },
+		operator: 'OR',
+		type: 'LogicalExpression'
+	});
+
+	test_parser('a AND b || c', {
+		left: {
+			left: { name: 'a' },
+			right: { name: 'b' },
+			operator: 'AND',
+			type: 'LogicalExpression'
+		},
+		right: { name: 'c' },
+		operator: '||',
+		type: 'LogicalExpression'
+	});
+
+	test_parser('a or b && c', {
+		left: { name: 'a' },
+		right: {
+			left: { name: 'b' },
+			right: { name: 'c' },
+			operator: '&&',
+			type: 'LogicalExpression'
+		},
+		operator: 'or',
+		type: 'LogicalExpression'
+	});
+});
+
 test('Argument positions', function() {
 	test_parser('fn(a    , b     ,    g(x,     y) )', {
 		arguments: [
