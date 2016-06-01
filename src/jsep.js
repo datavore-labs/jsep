@@ -53,13 +53,13 @@
 	// binary precedence for quick reference:
 	// see [Order of operations](http://en.wikipedia.org/wiki/Order_of_operations#Programming_language)
 		binary_ops = {
+			'=': -10, 'as': -1,
 			'||': 1, '&&': 2, '|': 3,  '^': 4,  '&': 5,
 			'==': 6, '!=': 6, '===': 6, '!==': 6,
 			'<': 7,  '>': 7,  '<=': 7,  '>=': 7,
 			'<<':8,  '>>': 8, '>>>': 8,
 			'+': 9, '-': 9,
-			'*': 10, '/': 10, '%': 10,
-			'=': undefined
+			'*': 10, '/': 10, '%': 10
 		},
 	// Get return the longest key length of any object
 		getMaxKeyLen = function(obj) {
